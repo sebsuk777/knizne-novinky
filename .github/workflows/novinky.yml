@@ -88,7 +88,7 @@ jobs:
                   parsed = urlparse(url)
                   if parsed.netloc != 'www.databazeknih.cz':
                       continue
-                  if re.search(r'knižní\s+novinky\s*\(\d{1,2}\.\s*týden\)\s*
+                  if re.search(r'knižní\s+novinky\s*\(\d{1,2}\.\s*týden\)\s*$', title, re.IGNORECASE) and re.search(r'/novinky/[^/]*knizni-novinky-\d+-tyden-\d+$', parsed.path):
                       return url, title
               raise RuntimeError('Tyzdenny clanok sa nenasiel. Treba skontrolovat strukturu stranky.')
 
@@ -115,110 +115,6 @@ jobs:
           role_ids = ['1557093164643258389', '1557093057642635405']
           payload = {'username': 'Knizne novinky', 'content': ' '.join('<@&' + role + '>' for role in role_ids), 'embeds': [embed], 'allowed_mentions': {'parse': [], 'roles': role_ids}}
           assert payload['content'] == '<@&1557093164643258389> <@&1557093057642635405>'
-          if dry_run:
-              print('Skusobna kontrola OK. Sprava ani stav sa neukladaju.')
-              print(json.dumps(payload, ensure_ascii=False, indent=2))
-              sys.exit(0)
-          if not re.fullmatch(r'https://(?:discord\.com|discordapp\.com)/api/webhooks/\d+/[A-Za-z0-9_-]+', webhook):
-              raise RuntimeError('Neplatny format webhooku v Actions secrets.')
-          request = urllib.request.Request(webhook + '?wait=true', data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'KnizneNovinky/1.0'}, method='POST')
-          try:
-              with urllib.request.urlopen(request, timeout=40) as response:
-                  sent = json.load(response)
-          except Exception:
-              print('Discord nepotvrdil odoslanie. Skontrolujte webhook a kanal. URL sa z bezpecnostnych dovodov nevypisuje.')
-              sys.exit(1)
-          if not sent.get('id'):
-              raise RuntimeError('Discord nevratil ID spravy.')
-          STATE.write_text(json.dumps({'url': url, 'title': title}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          print('Clanok bol odoslany do Discordu.')
-      - name: Zapamataj odoslany clanok
-        shell: bash
-        run: |
-          if [ ! -f last-sent.json ]; then exit 0; fi
-          git add last-sent.json
-          if git diff --cached --quiet; then exit 0; fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Zapamataj posledny odoslany clanok'
-          git push
-, title, re.IGNORECASE) and re.search(r'/novinky/[^/]*knizni-novinky-\d+-tyden-\d+
-                      return url, title
-              raise RuntimeError('Tyzdenny clanok sa nenasiel. Treba skontrolovat strukturu stranky.')
-
-          # Verify filtering and newest-first selection before any network action.
-          fixture = '<a href="/novinky/rozhovor-123">Rozhovor</a><a href="/novinky/test-knizni-novinky-41-tyden-2794">Novy</a><a href="/novinky/test-knizni-novinky-40-tyden-2780">Stary</a>'
-          assert latest_weekly(fixture)[1] == 'Novy'
-          url, title = latest_weekly(fetch(BASE + '/novinky'))
-          print('Najnovsi tyzdenny clanok:', title)
-          print(url)
-          previous = json.loads(STATE.read_text('utf-8')) if STATE.exists() else {}
-          if previous.get('url') == url:
-              print('Tento clanok uz bol odoslany. Nic sa neposiela.')
-              sys.exit(0)
-          article = Page()
-          article.feed(fetch(url))
-          description = article.meta.get('og:description') or article.meta.get('description', '')
-          description = ' '.join(html.unescape(description).split())[:450]
-          image = urljoin(url, article.meta.get('og:image', ''))
-          embed = {'title': title[:256], 'url': url, 'color': 15105570, 'footer': {'text': 'Databazeknih.cz'}}
-          if description:
-              embed['description'] = description
-          if article.meta.get('og:image') and urlparse(image).scheme == 'https':
-              embed['image'] = {'url': image}
-          payload = {'username': 'Knizne novinky', 'embeds': [embed], 'allowed_mentions': {'parse': []}}
-          if dry_run:
-              print('Skusobna kontrola OK. Sprava ani stav sa neukladaju.')
-              print(json.dumps(payload, ensure_ascii=False, indent=2))
-              sys.exit(0)
-          if not re.fullmatch(r'https://(?:discord\.com|discordapp\.com)/api/webhooks/\d+/[A-Za-z0-9_-]+', webhook):
-              raise RuntimeError('Neplatny format webhooku v Actions secrets.')
-          request = urllib.request.Request(webhook + '?wait=true', data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'KnizneNovinky/1.0'}, method='POST')
-          try:
-              with urllib.request.urlopen(request, timeout=40) as response:
-                  sent = json.load(response)
-          except Exception:
-              print('Discord nepotvrdil odoslanie. Skontrolujte webhook a kanal. URL sa z bezpecnostnych dovodov nevypisuje.')
-              sys.exit(1)
-          if not sent.get('id'):
-              raise RuntimeError('Discord nevratil ID spravy.')
-          STATE.write_text(json.dumps({'url': url, 'title': title}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          print('Clanok bol odoslany do Discordu.')
-      - name: Zapamataj odoslany clanok
-        shell: bash
-        run: |
-          if [ ! -f last-sent.json ]; then exit 0; fi
-          git add last-sent.json
-          if git diff --cached --quiet; then exit 0; fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Zapamataj posledny odoslany clanok'
-          git push
-, parsed.path):
-                      return url, title
-              raise RuntimeError('Tyzdenny clanok sa nenasiel. Treba skontrolovat strukturu stranky.')
-
-          # Verify filtering and newest-first selection before any network action.
-          fixture = '<a href="/novinky/rozhovor-123">Rozhovor</a><a href="/novinky/test-knizni-novinky-41-tyden-2794">Novy</a><a href="/novinky/test-knizni-novinky-40-tyden-2780">Stary</a>'
-          assert latest_weekly(fixture)[1] == 'Novy'
-          url, title = latest_weekly(fetch(BASE + '/novinky'))
-          print('Najnovsi tyzdenny clanok:', title)
-          print(url)
-          previous = json.loads(STATE.read_text('utf-8')) if STATE.exists() else {}
-          if previous.get('url') == url:
-              print('Tento clanok uz bol odoslany. Nic sa neposiela.')
-              sys.exit(0)
-          article = Page()
-          article.feed(fetch(url))
-          description = article.meta.get('og:description') or article.meta.get('description', '')
-          description = ' '.join(html.unescape(description).split())[:450]
-          image = urljoin(url, article.meta.get('og:image', ''))
-          embed = {'title': title[:256], 'url': url, 'color': 15105570, 'footer': {'text': 'Databazeknih.cz'}}
-          if description:
-              embed['description'] = description
-          if article.meta.get('og:image') and urlparse(image).scheme == 'https':
-              embed['image'] = {'url': image}
-          payload = {'username': 'Knizne novinky', 'embeds': [embed], 'allowed_mentions': {'parse': []}}
           if dry_run:
               print('Skusobna kontrola OK. Sprava ani stav sa neukladaju.')
               print(json.dumps(payload, ensure_ascii=False, indent=2))
